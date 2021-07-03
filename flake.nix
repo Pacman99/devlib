@@ -42,9 +42,6 @@
         let combinedLib = nixlib.lib // self; in
         with self;
         utils.lib // {
-          attrs = import ./src/attrs.nix { lib = combinedLib; };
-          lists = import ./src/lists.nix { lib = combinedLib; };
-          strings = import ./src/strings.nix { lib = combinedLib; };
           tests = import ./src/tests.nix { lib = combinedLib; };
 
           modules = import ./src/modules.nix {
@@ -102,13 +99,38 @@
     in
 
     {
-      lib = with lib; utils.lib // {
-        inherit attrs lists modules importers generators;
-        inherit (lib)
-          mkFlake
-          mkDeployNodes
-          mkHomeConfigurations;
-      };
+      # what you came for ...
+      lib = let
+
+        fupLib = with utils.lib; {
+
+          inherit
+           systemFlake
+           exporters
+           ;
+
+        };
+
+        diggaLib = with lib; {
+
+          inherit
+            modules
+            importers
+            ;
+
+          inherit (lib)
+            mkFlake
+            mkDeployNodes
+            mkHomeConfigurations
+            ;
+
+          inherit (lib.tests)
+            mkTest
+            ;
+
+        };
+
+      in fupLib // diggaLib;
 
       # digga-local use
       jobs =     ufrContract supportedSystems ./jobs      jobsInputs;
