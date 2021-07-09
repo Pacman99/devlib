@@ -19,12 +19,12 @@
       Generate the `nodes` attribute expected by deploy-rs
       where _nixosConfigurations_ are `nodes`.
       **/
-
+    let
+      # Any nixpkgs instance can be used, deploy only needs trivial builders
+      pkgs = (builtins.head (builtins.attrValues hosts)).pkgs.appendOverlays [ deploy.overlay ];
+    in
     lib.mapAttrs
       (_: config:
-        let
-          pkgs = config.pkgs.appendOverlays [ deploy.overlay ];
-        in
         lib.recursiveUpdate
           {
             hostname = config.config.networking.hostName;
