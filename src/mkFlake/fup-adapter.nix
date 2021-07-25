@@ -22,6 +22,9 @@ let
     })
   ];
 
+  allOverlays = lib.foldl (lhs: rhs: lhs.overlays or [ ] ++ rhs.overlays)
+    { } (builtins.attrValues config.channels);
+
   defaultHostModules = [
     (internal-modules.hmNixosDefaults {
       specialArgs = config.home.importables;
@@ -81,12 +84,12 @@ let
       modules = config.nixos.hostDefaults.externalModules ++ defaultHostModules;
     };
 
-    nixosModules = flake-utils-plus.lib.exportModules config.nixos.hostDefaults.modules;
+    outputsBuilder = channels:
+      flake-utils-plus.lib.mergeAny (defaultOutputsBuilder channels) (config.outputsBuilder channels);
 
-    homeModules = flake-utils-plus.lib.exportModules config.home.modules;
-
-    devshellModules = flake-utils-plus.lib.exportModules config.devshell.modules;
-
+  }
+  # Don't export following attributes if they will be empty
+  // lib.optionalAttrs (allOverlays != [ ]) {
     overlays = flake-utils-plus.lib.exporters.internalOverlays {
       # since we can't detect overlays owned by self
       # we have to filter out ones exported by the inputs
@@ -94,11 +97,17 @@ let
       inherit (config.self) pkgs;
       inherit (config) inputs;
     };
-
-    outputsBuilder = channels:
-      flake-utils-plus.lib.mergeAny (defaultOutputsBuilder channels) (config.outputsBuilder channels);
-
+  }
+  // lib.optionalAttrs (config.nixos.hostDefaults.modules != [ ]) {
+    nixosModules = flake-utils-plus.lib.exportModules config.nixos.hostDefaults.modules;
+  }
+  // lib.optionalAttrs (config.home.modules != [ ]) {
+    homeModules = flake-utils-plus.lib.exportModules config.home.modules;
+  }
+  // lib.optionalAttrs (config.devshell.modules != [ ]) {
+    devshellModules = flake-utils-plus.lib.exportModules config.devshell.modules;
   };
+
 
 in
 flake-utils-plus.lib.mkFlake

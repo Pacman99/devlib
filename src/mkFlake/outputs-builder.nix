@@ -6,6 +6,9 @@ let
   pkgs = channels.${config.nixos.hostDefaults.channelName};
   system = pkgs.system;
 
+  allOverlays = lib.foldl (lhs: rhs: lhs.overlays or [ ] ++ rhs.overlays)
+    { } (builtins.attrValues config.channels);
+
   mkPortableHomeManagerConfiguration =
     { username
     , configuration
@@ -42,12 +45,14 @@ let
       config.home.users;
 
 in
-{
-
+lib.optionalAttrs (homeConfigurationsPortable != { }) {
   inherit homeConfigurationsPortable;
-
+}
+// lib.optionalAttrs (allOverlays != [ ]) {
   packages = flake-utils-plus.lib.exportPackages config.self.overlays channels;
-
+}
+# Checks and devShell are never empty
+// {
   devShell =
     let
       eval = import "${devshell}/modules" pkgs;
